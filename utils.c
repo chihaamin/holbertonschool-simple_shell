@@ -131,7 +131,7 @@ int execute_command(char **args, char **envp, char *shell_name, int count)
 		if (execve(full_path, args, envp) == -1)
 		{
 			perror("execve");
-			exit(EXIT_FAILURE);
+			exit(1);
 		}
 	}
 	else if (pid < 0)
@@ -146,7 +146,7 @@ int execute_command(char **args, char **envp, char *shell_name, int count)
 		free(full_path);
 	}
 
-	return (WEXITSTATUS(status));
+	return (0);
 }
 
 /**
