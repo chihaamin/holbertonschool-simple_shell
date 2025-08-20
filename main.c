@@ -1,75 +1,136 @@
 #include "hsh.h"
 
+#include "hsh.h"
+
+int command_count = 0;
+char *shell_name;
+
 /**
- * main - Shell, interactive or non interactive
+ * execute_command - Execute a command
+ * @args: Command and arguments
+ * Return: Exit status
+ */
+int execute_command(char **args)
+{
+	pid_t pid;
+	int status;
+	char *full_path;
+
+	full_path = find_command_path(args[0]);
+	if (!full_path)
+	{
+		print_error(args[0], command_count);
+		return (127);
+	}
+
+	pid = fork();
+	if (pid == 0)
+	{
+		/* Child process */
+		if (execve(full_path, args, environ) == -1)
+		{
+			perror("execve");
+			exit(EXIT_FAILURE);
+		}
+	}
+	else if (pid < 0)
+	{
+		/* Fork failed */
+		perror("fork");
+		free(full_path);
+		return (1);
+	}
+	else
+	{
+		/* Parent process */
+		waitpid(pid, &status, 0);
+		free(full_path);
+	}
+
+	return (WEXITSTATUS(status));
+}
+
+/**
+ * print_error - Print error message
+ * @command: Command that failed
+ * @count: Command count
+ */
+void print_error(char *command, int count)
+{
+	fprintf(stderr, "%s: %d: %s: not found\n", shell_name, count, command);
+}
+
+/**
+ * main - Shell entry point
  * @argc: argument count
  * @argv: argument vector
- * @envp: environmental variable
- * Return: 1 if command fails
+ * @envp: environmental variables
+ * Return: exit status
  */
 int main(int argc, char *argv[], char **envp)
 {
 	char *line = NULL;
 	size_t len = 0;
 	ssize_t nread;
-	char *argv[100];
-	pid_t pid;
-	int status;
-	char *token;
-	int i;
+	char **args;
+	int status = 0;
+
+	(void)argc;
+	(void)envp;
+
+	shell_name = argv[0];
+	command_count = 0;
 
 	while (1)
 	{
-		if (isatty(STDIN_FILENO))
-			write(1, "$ ", 2);
+		command_count++;
 
+		/* Display prompt in interactive mode */
+		if (isatty(STDIN_FILENO))
+			write(STDOUT_FILENO, "$ ", 2);
+
+		/* Read input */
 		nread = getline(&line, &len, stdin);
 		if (nread == -1)
 		{
 			free(line);
-			break;
+			if (isatty(STDIN_FILENO))
+				write(STDOUT_FILENO, "\n", 1);
+			exit(status);
 		}
 
 		/* Remove newline */
 		if (nread > 0 && line[nread - 1] == '\n')
 			line[nread - 1] = '\0';
 
+		/* Skip empty lines */
 		if (line[0] == '\0')
-			continue;
-
-		/* Tokenize input into argv[] */
-		i = 0;
-		token = strtok(line, " \t\n");
-		while (token != NULL && i < 99)
 		{
-			argv[i++] = token;
-			token = strtok(NULL, " \t\n");
-		}
-		argv[i] = NULL;
-
-		if (argv[0] == NULL)
-			continue;
-
-		pid = fork();
-		if (pid == -1)
-		{
-			perror("fork");
+			command_count--;
 			continue;
 		}
-		if (pid == 0)
+
+		/* Tokenize input */
+		args = tokenize_input(line);
+		if (args[0] == NULL)
 		{
-			/* Child */
-			if (execve(argv[0], argv, environ) == -1)
-			{
-				perror("Error");
-				exit(EXIT_FAILURE);
-			}
+			free(args);
+			command_count--;
+			continue;
 		}
-		else
+
+		/* Handle built-in commands */
+		if (handle_builtins(args))
 		{
-			/* Parent */
-			waitpid(pid, &status, 0);
+			free(args);
+			continue;
 		}
+
+		/* Execute external command */
+		status = execute_command(args);
+		free(args);
 	}
-	return (0);
+
+	free(line);
+	return (status);
 }
