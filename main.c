@@ -1,5 +1,52 @@
 #include "hsh.h"
 
+#include "hsh.h"
+
+/**
+ * read_input - Read input from stdin
+ * @line: Pointer to buffer for storing input
+ * @len: Pointer to size of buffer
+ * Return: Number of characters read, or -1 on failure
+ */
+ssize_t read_input(char **line, size_t *len)
+{
+	if (isatty(STDIN_FILENO))
+		write(STDOUT_FILENO, "$ ", 2);
+
+	return (getline(line, len, stdin));
+}
+
+/**
+ * process_input - Process the input line
+ * @line: Input line to process
+ * @envp: Environment variables
+ * @shell_name: Name of the shell
+ * @count: Command count
+ * Return: Exit status of the command
+ */
+int process_input(char *line, char **envp, char *shell_name, int count)
+{
+	char **args;
+	int status = 0;
+
+	args = tokenize_input(line);
+	if (args[0] == NULL)
+	{
+		free(args);
+		return (0);
+	}
+
+	if (handle_builtins(args, envp))
+	{
+		free(args);
+		return (0);
+	}
+
+	status = execute_command(args, envp, shell_name, count);
+	free(args);
+	return (status);
+}
+
 /**
  * main - Shell entry point
  * @argc: argument count
@@ -12,7 +59,6 @@ int main(int argc, char *argv[], char **envp)
 	char *line = NULL;
 	size_t len = 0;
 	ssize_t nread;
-	char **args;
 	int status = 0, command_count = 0;
 	char *shell_name = argv[0];
 
@@ -21,13 +67,8 @@ int main(int argc, char *argv[], char **envp)
 	while (1)
 	{
 		command_count++;
+		nread = read_input(&line, &len);
 
-		/* Display prompt in interactive mode */
-		if (isatty(STDIN_FILENO))
-			write(STDOUT_FILENO, "$ ", 2);
-
-		/* Read input */
-		nread = getline(&line, &len, stdin);
 		if (nread == -1)
 		{
 			free(line);
@@ -36,36 +77,16 @@ int main(int argc, char *argv[], char **envp)
 			exit(status);
 		}
 
-		/* Remove newline */
 		if (nread > 0 && line[nread - 1] == '\n')
 			line[nread - 1] = '\0';
 
-		/* Skip empty lines */
 		if (line[0] == '\0')
 		{
 			command_count--;
 			continue;
 		}
 
-		/* Tokenize input */
-		args = tokenize_input(line);
-		if (args[0] == NULL)
-		{
-			free(args);
-			command_count--;
-			continue;
-		}
-
-		/* Handle built-in commands */
-		if (handle_builtins(args, envp))
-		{
-			free(args);
-			continue;
-		}
-
-		/* Execute external command */
-		status = execute_command(args, envp, shell_name, command_count);
-		free(args);
+		status = process_input(line, envp, shell_name, command_count);
 	}
 
 	free(line);
