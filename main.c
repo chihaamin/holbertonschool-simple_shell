@@ -13,17 +13,10 @@ int main(int argc, char *argv[], char **envp)
 	size_t len = 0;
 	ssize_t nread;
 	char **args;
-	int status = 0;
-	int command_count = 0;
+	int status = 0, command_count = 0;
+	char *shell_name = argv[0];
 
 	(void)argc;
-	(void)envp;
-
-	if (argc > 1)
-	{
-		fprintf(stderr, "Usage: %s\n", argv[0]);
-		return (EXIT_FAILURE);
-	}
 
 	while (1)
 	{
@@ -64,17 +57,28 @@ int main(int argc, char *argv[], char **envp)
 		}
 
 		/* Handle built-in commands */
-		if (handle_builtins(args))
+		if (handle_builtins(args, envp))
 		{
 			free(args);
 			continue;
 		}
 
 		/* Execute external command */
-		status = execute_command(args, command_count);
+		status = execute_command(args, envp, shell_name, command_count);
 		free(args);
 	}
 
 	free(line);
 	return (status);
+}
+
+/**
+ * print_error - Print error message
+ * @command: Command that failed
+ * @shell_name: Name of the shell program
+ * @count: Command count
+ */
+void print_error(char *command, char *shell_name, int count)
+{
+	fprintf(stderr, "%s: %d: %s: not found\n", shell_name, count, command);
 }

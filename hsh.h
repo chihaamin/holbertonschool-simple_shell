@@ -8,13 +8,11 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 
-extern char **environ;
-
 /* Function prototypes */
 char **tokenize_input(char *input);
-char *find_command_path(char *command);
-int execute_command(char **args, int cmd_count);
-int handle_builtins(char **args);
-void print_error(char *command, int count);
+char *find_command_path(char *command, char **envp);
+int execute_command(char **args, char **envp, char *shell_name, int count);
+int handle_builtins(char **args, char **envp);
+void print_error(char *command, char *shell_name, int count);
 
 #endif

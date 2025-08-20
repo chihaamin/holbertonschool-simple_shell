@@ -42,21 +42,42 @@ char **tokenize_input(char *input)
 }
 
 /**
+ * _getenv - Get environment variable value
+ * @name: Variable name
+ * @envp: Environment variables array
+ * Return: Value of variable or NULL if not found
+ */
+char *_getenv(char *name, char **envp)
+{
+	int i = 0;
+	size_t len = strlen(name);
+
+	while (envp[i] != NULL)
+	{
+		if (strncmp(envp[i], name, len) == 0 && envp[i][len] == '=')
+			return (envp[i] + len + 1);
+		i++;
+	}
+	return (NULL);
+}
+
+/**
  * find_command_path - Find the full path of a command
  * @command: Command to find
+ * @envp: Environment variables array
  * Return: Full path if found, NULL otherwise
  */
-char *find_command_path(char *command)
+char *find_command_path(char *command, char **envp)
 {
 	char *path, *path_copy, *dir, *full_path;
 	struct stat st;
 
 	if (strchr(command, '/') != NULL)
-		return (stat(command, &st) == 0 && st.st_mode & S_IXUSR)
-				   ? strdup(command)
-				   : NULL;
+		return ((stat(command, &st) == 0 && st.st_mode & S_IXUSR)
+					? strdup(command)
+					: NULL);
 
-	path = getenv("PATH");
+	path = _getenv("PATH", envp);
 	if (!path)
 		return (NULL);
 
@@ -84,55 +105,30 @@ char *find_command_path(char *command)
 }
 
 /**
- * handle_builtins - Handle built-in commands
- * @args: Command and arguments
- * Return: 1 if built-in handled, 0 otherwise
- */
-int handle_builtins(char **args)
-{
-	if (strcmp(args[0], "exit") == 0)
-	{
-		exit(EXIT_SUCCESS);
-	}
-	else if (strcmp(args[0], "env") == 0)
-	{
-		char **env = environ;
-
-		while (*env)
-		{
-			printf("%s\n", *env);
-			env++;
-		}
-		return (1);
-	}
-
-	return (0);
-}
-
-/**
  * execute_command - Execute a command
  * @args: Command and arguments
- * @cmd_count: Command count for error messages
+ * @envp: Environment variables array
+ * @shell_name: Name of the shell program
+ * @count: Command count for error messages
  * Return: Exit status
  */
-int execute_command(char **args, int cmd_count)
+int execute_command(char **args, char **envp, char *shell_name, int count)
 {
 	pid_t pid;
 	int status;
 	char *full_path;
 
-	full_path = find_command_path(args[0]);
+	full_path = find_command_path(args[0], envp);
 	if (!full_path)
 	{
-		print_error(args[0], cmd_count);
+		print_error(args[0], shell_name, count);
 		return (127);
 	}
 
 	pid = fork();
 	if (pid == 0)
 	{
-		/* Child process */
-		if (execve(full_path, args, environ) == -1)
+		if (execve(full_path, args, envp) == -1)
 		{
 			perror("execve");
 			exit(EXIT_FAILURE);
@@ -140,14 +136,12 @@ int execute_command(char **args, int cmd_count)
 	}
 	else if (pid < 0)
 	{
-		/* Fork failed */
 		perror("fork");
 		free(full_path);
 		return (1);
 	}
 	else
 	{
-		/* Parent process */
 		waitpid(pid, &status, 0);
 		free(full_path);
 	}
@@ -156,11 +150,28 @@ int execute_command(char **args, int cmd_count)
 }
 
 /**
- * print_error - Print error message
- * @command: Command that failed
- * @count: Command count
+ * handle_builtins - Handle built-in commands
+ * @args: Command and arguments
+ * @envp: Environment variables array
+ * Return: 1 if built-in handled, 0 otherwise
  */
-void print_error(char *command, int count)
+int handle_builtins(char **args, char **envp)
 {
-	fprintf(stderr, "hsh: %d: %s: not found\n", count, command);
+	if (strcmp(args[0], "exit") == 0)
+	{
+		exit(EXIT_SUCCESS);
+	}
+	else if (strcmp(args[0], "env") == 0)
+	{
+		int i = 0;
+
+		while (envp[i] != NULL)
+		{
+			printf("%s\n", envp[i]);
+			i++;
+		}
+		return (1);
+	}
+
+	return (0);
 }
