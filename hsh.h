@@ -13,7 +13,7 @@ extern char **environ;
 /* Function prototypes */
 char **tokenize_input(char *input);
 char *find_command_path(char *command);
-int execute_command(char **args);
+int execute_command(char **args, int cmd_count);
 int handle_builtins(char **args);
 void print_error(char *command, int count);
 

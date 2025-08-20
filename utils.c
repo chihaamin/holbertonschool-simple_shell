@@ -108,3 +108,59 @@ int handle_builtins(char **args)
 
 	return (0);
 }
+
+/**
+ * execute_command - Execute a command
+ * @args: Command and arguments
+ * @cmd_count: Command count for error messages
+ * Return: Exit status
+ */
+int execute_command(char **args, int cmd_count)
+{
+	pid_t pid;
+	int status;
+	char *full_path;
+
+	full_path = find_command_path(args[0]);
+	if (!full_path)
+	{
+		print_error(args[0], cmd_count);
+		return (127);
+	}
+
+	pid = fork();
+	if (pid == 0)
+	{
+		/* Child process */
+		if (execve(full_path, args, environ) == -1)
+		{
+			perror("execve");
+			exit(EXIT_FAILURE);
+		}
+	}
+	else if (pid < 0)
+	{
+		/* Fork failed */
+		perror("fork");
+		free(full_path);
+		return (1);
+	}
+	else
+	{
+		/* Parent process */
+		waitpid(pid, &status, 0);
+		free(full_path);
+	}
+
+	return (WEXITSTATUS(status));
+}
+
+/**
+ * print_error - Print error message
+ * @command: Command that failed
+ * @count: Command count
+ */
+void print_error(char *command, int count)
+{
+	fprintf(stderr, "hsh: %d: %s: not found\n", count, command);
+}
