@@ -29,6 +29,6 @@ The `hsh` program is a simple shell implementation developed as part of the curr
 The `hsh` shell can be compiled using the following command:
 - ./hsh
 
-# AUTHORS
+# AUTHOR
 
 Amin Chiha <amin.chiha@gmail.com>
