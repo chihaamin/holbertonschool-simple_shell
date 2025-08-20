@@ -20,12 +20,15 @@ ssize_t read_input(char **line, size_t *len)
  * @envp: Environment variables
  * @shell_name: Name of the shell
  * @count: Command count
+ * @last_status: Pointer to the status of the last command
  * Return: Exit status of the command, or -1 if exit command
  */
-int process_input(char *line, char **envp, char *shell_name, int count)
+int process_input(char *line, char **envp, char *shell_name,
+				  int count, int *last_status)
 {
 	char **args;
 	int status = 0;
+	int builtin_result;
 
 	args = tokenize_input(line);
 	if (args[0] == NULL)
@@ -34,12 +37,13 @@ int process_input(char *line, char **envp, char *shell_name, int count)
 		return (0);
 	}
 
-	if (handle_builtins(args, envp) == 2)
+	builtin_result = handle_builtins(args, envp);
+	if (builtin_result == 2)
 	{
 		free(args);
 		return (-1);
 	}
-	else if (handle_builtins(args, envp) == 1)
+	else if (builtin_result == 1)
 	{
 		free(args);
 		return (0);
@@ -47,6 +51,7 @@ int process_input(char *line, char **envp, char *shell_name, int count)
 
 	status = execute_command(args, envp, shell_name, count);
 	free(args);
+	*last_status = status;
 	return (status);
 }
 
@@ -64,6 +69,7 @@ int main(int argc, char *argv[], char **envp)
 	ssize_t nread;
 	int status = 0, command_count = 0;
 	char *shell_name = argv[0];
+	int last_status = 0;
 
 	(void)argc;
 
@@ -77,7 +83,7 @@ int main(int argc, char *argv[], char **envp)
 			free(line);
 			if (isatty(STDIN_FILENO))
 				write(STDOUT_FILENO, "\n", 1);
-			exit(status);
+			exit(last_status);
 		}
 
 		if (nread > 0 && line[nread - 1] == '\n')
@@ -89,16 +95,15 @@ int main(int argc, char *argv[], char **envp)
 			continue;
 		}
 
-		status = process_input(line, envp, shell_name, command_count);
+		status = process_input(line, envp, shell_name, command_count, &last_status);
 		if (status == -1)
 		{
 			free(line);
-			exit(0);
+			exit(last_status);
 		}
 	}
-
 	free(line);
-	return (status);
+	return (last_status);
 }
 
 /**

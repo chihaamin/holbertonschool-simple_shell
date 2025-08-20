@@ -131,7 +131,7 @@ int execute_command(char **args, char **envp, char *shell_name, int count)
 		if (execve(full_path, args, envp) == -1)
 		{
 			perror("execve");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 	else if (pid < 0)
@@ -146,7 +146,10 @@ int execute_command(char **args, char **envp, char *shell_name, int count)
 		free(full_path);
 	}
 
-	return (0);
+	if (WIFEXITED(status))
+		return (WEXITSTATUS(status));
+	else
+		return (128 + WTERMSIG(status));
 }
 
 /**
