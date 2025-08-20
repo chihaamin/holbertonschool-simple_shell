@@ -1,7 +1,5 @@
 #include "hsh.h"
 
-#include "hsh.h"
-
 /**
  * read_input - Read input from stdin
  * @line: Pointer to buffer for storing input
@@ -22,7 +20,7 @@ ssize_t read_input(char **line, size_t *len)
  * @envp: Environment variables
  * @shell_name: Name of the shell
  * @count: Command count
- * Return: Exit status of the command
+ * Return: Exit status of the command, or -1 if exit command
  */
 int process_input(char *line, char **envp, char *shell_name, int count)
 {
@@ -36,7 +34,12 @@ int process_input(char *line, char **envp, char *shell_name, int count)
 		return (0);
 	}
 
-	if (handle_builtins(args, envp))
+	if (handle_builtins(args, envp) == 2)
+	{
+		free(args);
+		return (-1);
+	}
+	else if (handle_builtins(args, envp) == 1)
 	{
 		free(args);
 		return (0);
@@ -87,6 +90,11 @@ int main(int argc, char *argv[], char **envp)
 		}
 
 		status = process_input(line, envp, shell_name, command_count);
+		if (status == -1)
+		{
+			free(line);
+			exit(0);
+		}
 	}
 
 	free(line);

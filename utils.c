@@ -153,13 +153,13 @@ int execute_command(char **args, char **envp, char *shell_name, int count)
  * handle_builtins - Handle built-in commands
  * @args: Command and arguments
  * @envp: Environment variables array
- * Return: 1 if built-in handled, 0 otherwise
+ * Return: 2 for exit, 1 for env, 0 for not built-in
  */
 int handle_builtins(char **args, char **envp)
 {
 	if (strcmp(args[0], "exit") == 0)
 	{
-		exit(EXIT_SUCCESS);
+		return (2);
 	}
 	else if (strcmp(args[0], "env") == 0)
 	{
