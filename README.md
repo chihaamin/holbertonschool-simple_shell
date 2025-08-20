@@ -109,7 +109,7 @@ The project uses a limited set of functions as required:
 `write`, and functions from `string.h`
 
 Authors
-[Amin Chiha] <[amin.chiha@gmail.com]>
+Amin Chiha <amin.chiha@gmail.com>
 
 License
 This project is part of the Holberton School curriculum and is for educational purposes.
